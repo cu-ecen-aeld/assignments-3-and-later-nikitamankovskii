@@ -1,4 +1,12 @@
 #include "systemcalls.h"
+#include <fcntl.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+
+
+
 
 /**
  * @param cmd the command to execute with system()
@@ -16,7 +24,12 @@ bool do_system(const char *cmd)
  *   and return a boolean true if the system() call completed with success
  *   or false() if it returned a failure
 */
+    int ret = system(cmd);
 
+    if (ret == -1 ) {
+        printf("Faild. system %s status %d", cmd, ret);
+        return false;
+    }
     return true;
 }
 
@@ -47,7 +60,7 @@ bool do_exec(int count, ...)
     command[count] = NULL;
     // this line is to avoid a compile warning before your implementation is complete
     // and may be removed
-    command[count] = command[count];
+    // command[count] = command[count];
 
 /*
  * TODO:
@@ -59,9 +72,32 @@ bool do_exec(int count, ...)
  *
 */
 
+    int pid = fork();
+    if (pid == -1) {
+        // printf("Failed to fork.");
+        va_end(args);
+        return false;
+    } 
+    if (pid ==0 ) {
+        int ret = execv(command[0], command);
+        if (ret == -1){
+            exit(-1);
+            // printf("Failed. execv %s with code %d", command[0], ret);
+            // va_end(args);
+            // return false;
+        }
+    }
+    int status;
+    pid_t ret = waitpid(pid, &status, 0); 
+    if (ret == -1) {
+        // printf("Failed. Child process return %d", ret);
+        va_end(args);
+        return false;
+    }
+    
     va_end(args);
 
-    return true;
+    return WIFEXITED(status) && (WEXITSTATUS(status) == 0);
 }
 
 /**
@@ -92,6 +128,41 @@ bool do_exec_redirect(const char *outputfile, int count, ...)
  *   The rest of the behaviour is same as do_exec()
  *
 */
+
+    int pid = fork();
+    if (pid == -1) {
+        // printf("Failed to fork.");
+        va_end(args);
+        return false;
+    } else if (pid ==0 ) {
+
+        int fd = open(outputfile, O_WRONLY|O_TRUNC|O_CREAT, 0644); 
+        if (fd == -1) {
+            // printf("Failed. df for %s eq %d", outputfile, fd);
+            close(fd);
+            va_end(args);
+            return false;
+        }
+        if (dup2(fd, 1) == -1) {
+            // printf("Failed. dup ");
+            close(fd);
+            exit(1);
+        }
+        close(fd);
+        int ret = execv(command[0], command);
+        if (ret == -1){
+            // printf("Failed. execv %s with code %d", command[0], ret);
+            va_end(args);
+            return false;
+        }
+    }
+    int status;
+    pid_t ret = waitpid(pid, &status, 0); 
+    if (ret == -1) {
+        // printf("Failed. Child process return %d", ret);
+        va_end(args);
+        return false;
+    }
 
     va_end(args);
 
