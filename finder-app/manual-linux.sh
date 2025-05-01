@@ -73,7 +73,7 @@ fi
 # TODO: Create necessary base directories
 mkdir rootfs
 cd "${OUTDIR}/rootfs"
-mkdir -p bin dev etc home lib lib64 proc sbin sys tmp usr var
+mkdir -p conf bin dev etc home lib lib64 proc sbin sys tmp usr var
 mkdir -p usr/bin usr/lib usr/sbin
 mkdir -p var/log 
 
@@ -112,7 +112,7 @@ cp ${SYSROOT}/lib64/libc.so.6 ${OUTDIR}/rootfs/lib64/
 
 # TODO: Make device nodes
 sudo mknod -m 666 ${OUTDIR}/rootfs/dev/null c 1 3
-sudo mknod -m 666 ${OUTDIR}/rootfs/dev/ttyAMA0 c 5 1
+sudo mknod -m 666 ${OUTDIR}/rootfs/dev/console c 5 1
 # TODO: Clean and build the writer utility
 cd $FINDER_APP_DIR
 make CROSS_COMPILE=${CROSS_COMPILE} clean
@@ -122,7 +122,10 @@ make CROSS_COMPILE=${CROSS_COMPILE}
 # on the target rootfs
 cp writer ${OUTDIR}/rootfs/home/
 cp finder-test.sh ${OUTDIR}/rootfs/home/
-cp -r ../conf ${OUTDIR}/rootfs/home/
+cp finder.sh ${OUTDIR}/rootfs/home/
+mkdir ${OUTDIR}/rootfs/home/conf
+cp ../conf/assignment.txt ${OUTDIR}/rootfs/conf/
+cp ../conf/username.txt ${OUTDIR}/rootfs/home/conf/
 cp autorun-qemu.sh ${OUTDIR}/rootfs/home/
 # TODO: Chown the root directory
 sudo chown -R root:root ${OUTDIR}/rootfs/*
