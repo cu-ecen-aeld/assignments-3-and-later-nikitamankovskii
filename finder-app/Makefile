@@ -4,6 +4,7 @@ else
 	compiler=gcc
 endif
 
+all: writer
 
 writer: writer.o
 	$(compiler) writer.o  -o writer
