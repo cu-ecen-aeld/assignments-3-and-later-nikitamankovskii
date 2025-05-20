@@ -90,7 +90,7 @@ int main(int argc, char *argv[]) {
         goto cleanup;
     }
 
-    while (!is_running) {
+    while (is_running) {
         fd_set read_fds;
         FD_ZERO(&read_fds);
         FD_SET(sock_fd, &read_fds);
@@ -123,7 +123,7 @@ int main(int argc, char *argv[]) {
             size_t total_len = 0;
             char *packet = NULL;
 
-            while (!is_running && (recv_bytes = recv(client_fd, buffer, sizeof(buffer)-1, 0)) > 0) {
+            while (is_running && (recv_bytes = recv(client_fd, buffer, sizeof(buffer)-1, 0)) > 0) {
                 buffer[recv_bytes] = '\0';
                 char *nl_pos = strchr(buffer, '\n');
                 if (!nl_pos) {
