@@ -1,17 +1,15 @@
-ifeq ($(CROSS_COMPILE),aarch64-none-linux-gnu-)
-	CC=aarch64-none-linux-gnu-gcc
-else
-	CC=gcc
-endif
-# $(compiler)
+CC ?= $(CROSS_COMPILE)gcc
+CFLAGS= -g -Wall -Werror -Wno-unused-result -Wno-maybe-uninitialized -I. 
+LDFLAGS ?= -lpthread -lrt
+
 all: aesdsocket
 
 aesdsocket: aesdsocket.o
-	$(CC) $(LDFLAGS) aesdsocket.o  -o aesdsocket
+	$(CC) $(CFLAGS) $(LDFLAGS) -o aesdsocket aesdsocket.o 
 
-aesdsocket.o: aesdsocket.c
-	$(CC) $(CCFLAGS) -c aesdsocket.c 
-
+%.o: %.c 
+	$(CC) $(CFLAGS) -c -o $@ $< $(CFLAGS)
 
 clean:
-	rm -f aesdsocket *.o
+	rm -rf *.o
+	rm -rf aesdsocket
