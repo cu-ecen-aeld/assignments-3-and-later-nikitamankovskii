@@ -114,9 +114,9 @@ void timer_handler(union sigval dum_val) {
         exit(EXIT_FAILURE);
     }
     pthread_mutex_lock(&file_mutex);
-        if(write(file_fd, timestamp, size)){
-            syslog(LOG_ERR, "Error writing timer to file: %s", strerror(errno));
-        }
+    if(write(file_fd, timestamp, size)){
+        syslog(LOG_ERR, "Error writing timer to file: %s", strerror(errno));
+    }
     pthread_mutex_unlock(&file_mutex);
 }
 
@@ -145,31 +145,33 @@ int client_fd = -1;
 
 void cleanup(){
     struct thread_data *entry;
-        SLIST_FOREACH(entry, &head, entries) {
-            pthread_cancel(entry->thread_id);
-        }
-        SLIST_FOREACH(entry, &head, entries) {
-            pthread_join(entry->thread_id, NULL);
-        }
-        while (!SLIST_EMPTY(&head)) {
-            entry = SLIST_FIRST(&head);
-            SLIST_REMOVE_HEAD(&head, entries);
-            free(entry);
-        }
-        if (server_fd >= 0) {
-            close(server_fd);
-        }
-        if (remove(DATA_FILE) != 0) {
-            syslog(LOG_ERR, "Failed to delete the file %s: %s", DATA_FILE, strerror(errno));
-        }
-        pthread_mutex_destroy(&file_mutex); 
-        syslog(LOG_INFO, "Sockets terminated");
-        syslog(LOG_INFO, "Program acheived a graceful exit!!");
-        
-        closelog();
-        
-        close(client_fd);
+    SLIST_FOREACH(entry, &head, entries) {
+        pthread_cancel(entry->thread_id);
+    }
+    SLIST_FOREACH(entry, &head, entries) {
+        pthread_join(entry->thread_id, NULL);
+    }
+    while (!SLIST_EMPTY(&head)) {
+        entry = SLIST_FIRST(&head);
+        SLIST_REMOVE_HEAD(&head, entries);
+        free(entry);
+    }
+    if (server_fd >= 0) {
         close(server_fd);
+        syslog(LOG_INFO, "Socket_fd terminated");
+    }
+    if (remove(DATA_FILE) != 0) {
+        syslog(LOG_ERR, "Failed to delete the file %s: %s", DATA_FILE, strerror(errno));
+    }
+    pthread_mutex_destroy(&file_mutex); 
+    syslog(LOG_INFO, "Sockets terminated");
+    syslog(LOG_INFO, "Program acheived a graceful exit!!");
+    
+    closelog();
+    
+    close(client_fd);
+    close(server_fd);
+    exit(0);
 }
 
 void signal_handler(int signo) {
@@ -206,7 +208,9 @@ int main(int argc, char *argv[]) {
     addr_server.sin_family = AF_INET;
     addr_server.sin_addr.s_addr = htonl(INADDR_ANY);
     addr_server.sin_port = htons(PORT);
+    int __optval = 1;
     
+    setsockopt(server_fd,SOL_SOCKET,SO_REUSEADDR, &__optval,sizeof(int));
     if (bind(server_fd, (struct sockaddr *)&addr_server, sizeof(addr_server)) != 0) {
         syslog(LOG_ERR, "Bind failed: %s", strerror(errno));
         cleanup();
