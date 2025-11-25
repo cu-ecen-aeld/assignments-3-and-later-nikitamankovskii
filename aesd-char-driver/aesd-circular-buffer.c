@@ -32,20 +32,45 @@ struct aesd_buffer_entry *aesd_circular_buffer_find_entry_offset_for_fpos(struct
     /**
     * TODO: implement per description
     */
-        
-    uint8_t counter = 0;
-    uint8_t offset = buffer->out_offs;
-    size_t  actualCharOff = 0;
 
-    uint8_t pos = offset;
-    while ((!buffer->full && pos != buffer->in_offs) || (buffer->full && counter < AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED)) {
-        if (buffer->entry[pos].size + actualCharOff > char_offset) {
-            *entry_offset_byte_rtn = char_offset - actualCharOff;
-            return &buffer->entry[pos];
+    if (!buffer->full && (buffer->in_offs == buffer->out_offs))   //if buffer is not full and in= out buffr is empty
+    {
+        return NULL;
+    }
+
+
+    size_t num_entries;
+    if (buffer->full) 
+    {
+        num_entries = AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+    } 
+    else if (buffer->in_offs >= buffer->out_offs) 
+    {
+        num_entries = buffer->in_offs - buffer->out_offs;
+    } 
+    else 
+    {
+        num_entries = (AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED - buffer->out_offs) + buffer->in_offs;
+    }
+
+   
+    size_t index = buffer->out_offs;
+    size_t i;
+    for(i = 0; i < num_entries; i++) 
+    {
+        struct aesd_buffer_entry *entry = &buffer->entry[index];
+
+        if (char_offset < entry->size) 
+        {
+            if (entry_offset_byte_rtn != NULL) 
+            {
+                *entry_offset_byte_rtn = char_offset;
+            }
+            return entry;
         }
-        actualCharOff += buffer->entry[pos].size;
-        counter++;
-        pos = (offset + counter) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
+
+        char_offset -= entry->size;
+        index = (index + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
     return NULL;
 }
@@ -63,19 +88,16 @@ void aesd_circular_buffer_add_entry(struct aesd_circular_buffer *buffer, const s
     * TODO: implement per description
     */
     
-    uint8_t next = buffer->in_offs + 1;
-
-    buffer->entry[buffer->in_offs] = *add_entry;
-    if (next >= AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED) {
-        buffer->in_offs = 0;
-        buffer->full = true;
-    } else {
-        buffer->in_offs = next;
+    if (buffer->full)  //if buffer is full will overwrite the oldest entry
+    {
+        buffer->out_offs = (buffer->out_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;
     }
 
-    if (buffer->full) {
-        buffer->out_offs = buffer->in_offs;
-    }
+    buffer->entry[buffer->in_offs] = *add_entry; //copy the new entry to int_off
+
+    buffer->in_offs = (buffer->in_offs + 1) % AESDCHAR_MAX_WRITE_OPERATIONS_SUPPORTED;  //increment in_off to next position
+
+    buffer->full = (buffer->in_offs == buffer->out_offs); //in=out so buffer is full
 }
 
 /**
